@@ -1,54 +1,126 @@
-let weather = {
-  apiKey: "API KEY GOES HERE",
-  fetchWeather: function (city) {
-    fetch(
-      "https://api.openweathermap.org/data/2.5/weather?q=" +
-        city +
-        "&units=metric&appid=" +
-        this.apiKey
-    )
-      .then((response) => {
-        if (!response.ok) {
-          alert("No weather found.");
-          throw new Error("No weather found.");
-        }
-        return response.json();
-      })
-      .then((data) => this.displayWeather(data));
-  },
-  displayWeather: function (data) {
-    const { name } = data;
-    const { icon, description } = data.weather[0];
-    const { temp, humidity } = data.main;
-    const { speed } = data.wind;
-    document.querySelector(".city").innerText = "Weather in " + name;
-    document.querySelector(".icon").src =
-      "https://openweathermap.org/img/wn/" + icon + ".png";
-    document.querySelector(".description").innerText = description;
-    document.querySelector(".temp").innerText = temp + "°C";
-    document.querySelector(".humidity").innerText =
-      "Humidity: " + humidity + "%";
-    document.querySelector(".wind").innerText =
-      "Wind speed: " + speed + " km/h";
-    document.querySelector(".weather").classList.remove("loading");
-    document.body.style.backgroundImage =
-      "url('https://source.unsplash.com/1600x900/?" + name + "')";
-  },
-  search: function () {
-    this.fetchWeather(document.querySelector(".search-bar").value);
-  },
+
+const appConstants = {
+ apiKey: "82dc35ae1f29a3117458ae4a8f1255c9",
+ baseUrl: "https://api.openweathermap.org/data/2.5/weather",
+ units: "metric",
+ unknownValue: "NA",
+ imageUrl: "http://openweathermap.org/img/wn/",
 };
 
-document.querySelector(".search button").addEventListener("click", function () {
-  weather.search();
-});
+function getWeatherInformation(event) {
+  event.preventDefault();
+  const location = document.querySelector(".change-location .input-group")[0]
+    .value;
+  fetch(
+    `${appConstants.baseUrl}?q=${location}&units=${appConstants.units}&APPID=${appConstants.apiKey}`
+  )
+    .then((response) => {
+      if (response.status === 200) {
+        return response.json();
+      }
+      throw Error("Error fetching data.");
+    })
+    .then((data) => {
+      updateDom(data);
+    })
+    .catch((error) => {
+      console.error(error);
+      alert(`Error getting information for ${location}`);
+    });
+}
 
-document
-  .querySelector(".search-bar")
-  .addEventListener("keyup", function (event) {
-    if (event.key == "Enter") {
-      weather.search();
-    }
-  });
+function updateDom(data) {
+  const dateInformation = getDateInformation();
 
-weather.fetchWeather("Denver")
+  // Update day
+  document.querySelector(
+    ".weather .weather-information .weather-day"
+  ).innerHTML = dateInformation.day;
+
+  // Update date
+  document.querySelector(
+    ".weather .weather-information .weather-date"
+  ).innerHTML = `${dateInformation.date} ${dateInformation.month} ${dateInformation.year}`;
+
+  // Update location
+  document.querySelector(
+    ".weather .weather-information .weather-location .city"
+  ).innerHTML = `${data?.name || appConstants.unknownValue}, ${
+    data?.sys?.country || appConstants.unknownValue
+  }`;
+
+  // Update image
+  document
+    .querySelector(
+      ".weather .weather-information .weather-type .weather-image img"
+    )
+    .setAttribute(
+      "src",
+      `${appConstants.imageUrl}${data?.weather?.[0]?.icon}.png`
+    );
+
+  // Update temperature
+  document.querySelector(
+    ".weather .weather-information .weather-type .weather-temperature"
+  ).innerHTML = `${parseInt(data?.main?.temp || 0)}&deg;C`;
+
+  // Update description
+  document.querySelector(
+    ".weather .weather-information .weather-type .weather-description"
+  ).innerHTML = `${data?.weather?.[0]?.main || appConstants.unknownValue}`;
+
+  // Update information list
+  const informationNodesValues = document
+    .getElementById("information-list")
+    .querySelectorAll(".information-type .information-type-value");
+
+  informationNodesValues[0].innerHTML = `${
+    data?.main?.humidity || appConstants.unknownValue
+  }`;
+  informationNodesValues[1].innerHTML = `${
+    data?.wind?.speed || appConstants.unknownValue
+  }`;
+  informationNodesValues[2].innerHTML = `${
+    data?.visibility || appConstants.unknownValue
+  }`;
+  informationNodesValues[3].innerHTML = `${parseInt(
+    (data?.main?.["temp_min"] + data?.main?.["temp_max"]) / 2
+  )}&deg;C`;
+}
+
+function getDateInformation() {
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sept",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const d = new Date();
+  const day = days[d.getDay()];
+  const date = d.getDate();
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return {
+    day,
+    date,
+    month,
+    year,
+  };
+}
